@@ -6,17 +6,62 @@ end
 
 local nvim_scripts = (os.getenv("USERPROFILE") or vim.fn.expand("~")) .. "\\AppData\\Local\\nvim\\scripts\\"
 
-local function run_script(script)
-  local result = vim.fn.system("powershell -File " .. nvim_scripts .. script)
-  print(result)
+-- Show a brief floating notification then auto-close
+local function notify(msg, is_error)
+  local lines = { "", "  " .. msg, "" }
+  local width = #msg + 4
+  local buf   = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.api.nvim_buf_set_option(buf, "modifiable", false)
+
+  local win = vim.api.nvim_open_win(buf, false, {
+    relative  = "editor",
+    width     = width,
+    height    = 3,
+    row       = vim.o.lines - 6,
+    col       = math.floor((vim.o.columns - width) / 2),
+    style     = "minimal",
+    border    = "rounded",
+    title     = is_error and " Error " or " Done ",
+    title_pos = "center",
+  })
+
+  -- Auto-close after 3 seconds
+  vim.defer_fn(function()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end, 3000)
+end
+
+-- Run a PowerShell script silently and notify on completion
+local function run_script(script, label)
+  -- Run async using jobstart so Neovim doesn't block
+  local stderr_lines = {}
+  vim.fn.jobstart("powershell -NonInteractive -NoProfile -File " .. nvim_scripts .. script, {
+    on_stderr = function(_, data)
+      for _, line in ipairs(data) do
+        if line ~= "" then table.insert(stderr_lines, line) end
+      end
+    end,
+    on_exit = function(_, code)
+      vim.schedule(function()
+        if code == 0 then
+          notify(label .. " synced successfully")
+        else
+          notify(label .. " sync failed — check git status", true)
+        end
+      end)
+    end,
+  })
 end
 
 -- Note creation
-map("n", "<leader>nf", function() require("notes.templates").new_fleeting() end,   { desc = "New fleeting note" })
-map("n", "<leader>nl", function() require("notes.templates").new_literature() end, { desc = "New literature note" })
-map("n", "<leader>np", function() require("notes.templates").new_permanent() end,  { desc = "New permanent note" })
-map("n", "<leader>nP", function() require("notes.templates").new_project() end,    { desc = "New project" })
-map("n", "<leader>na", function() require("notes.templates").new_area() end,       { desc = "New area / MoC" })
+map("n", "<leader>nf",  function() require("notes.templates").new_fleeting() end,         { desc = "New fleeting note" })
+map("n", "<leader>nl",  function() require("notes.templates").new_literature() end,       { desc = "New literature note" })
+map("n", "<leader>np",  function() require("notes.templates").new_permanent() end,        { desc = "New permanent note" })
+map("n", "<leader>nP",  function() require("notes.templates").new_project() end,          { desc = "New project" })
+map("n", "<leader>na",  function() require("notes.templates").new_area() end,             { desc = "New area / MoC" })
 map("n", "<leader>npp", function() require("notes.templates").promote_to_permanent() end, { desc = "Promote fleeting to permanent" })
 
 -- Navigation
@@ -35,15 +80,12 @@ map("n", "<leader>to", function() require("notes.tasks").show_tasks() end,  { de
 
 -- Git sync
 map("n", "<leader>gs", function()
-  print("Syncing notes vault...")
-  run_script("sync-notes.ps1")
-  print("Syncing nvim config...")
-  run_script("sync-config.ps1")
-  print("Sync complete.")
+  run_script("sync-notes.ps1",  "Notes vault")
+  run_script("sync-config.ps1", "Nvim config")
 end, { desc = "Sync all to GitHub" })
 
 map("n", "<leader>gp", function()
-  run_script("publish-notes.ps1")
+  run_script("publish-notes.ps1", "Public notes")
 end, { desc = "Publish public notes" })
 
 -- Search (defined in plugins/telescope.lua)
@@ -52,10 +94,8 @@ end, { desc = "Publish public notes" })
 -- <leader>sp  grep projects
 
 -- General
-map("n", "<leader>w", "<cmd>w<cr>", { desc = "Save file" })
-map("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit" })
-map("n", "<leader>?", function() require("notes.cheatsheet").open() end, { desc = "Keybind cheatsheet" })
-
--- File explorer
-map("n", "<leader>e",  "<cmd>NvimTreeToggle<cr>", { desc = "Toggle file explorer" })
-map("n", "<leader>ef", "<cmd>NvimTreeFocus<cr>",  { desc = "Focus file explorer" })
+map("n", "<leader>w",  "<cmd>w<cr>",                                              { desc = "Save file" })
+map("n", "<leader>q",  "<cmd>q<cr>",                                              { desc = "Quit" })
+map("n", "<leader>?",  function() require("notes.cheatsheet").open() end,         { desc = "Keybind cheatsheet" })
+map("n", "<leader>e",  "<cmd>NvimTreeToggle<cr>",                                 { desc = "Toggle file explorer" })
+map("n", "<leader>ef", "<cmd>NvimTreeFocus<cr>",                                  { desc = "Focus file explorer" })
