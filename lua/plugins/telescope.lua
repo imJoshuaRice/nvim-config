@@ -10,8 +10,15 @@ return {
 
       telescope.setup({
         defaults = {
-          path_display        = { "smart" },
-          file_ignore_patterns = { ".git/", "%.pdf", "%.docx" },
+          path_display         = { "smart" },
+          file_ignore_patterns = {
+            "%.git[\\/]",
+            "%.git$",
+            "node_modules[\\/]",
+            "%.pdf$",
+            "%.docx$",
+            "%.xlsx$",
+          },
           preview = {
             treesitter = false,
           },
@@ -19,7 +26,7 @@ return {
       })
 
       vim.keymap.set("n", "<leader>sf", function()
-        builtin.find_files({ cwd = notes })
+        builtin.find_files({ cwd = notes, hidden = false })
       end, { desc = "Search note filenames" })
 
       vim.keymap.set("n", "<leader>sg", function()
