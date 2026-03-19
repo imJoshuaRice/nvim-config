@@ -54,6 +54,7 @@ end, { desc = "Publish public notes" })
 -- General
 map("n", "<leader>w", "<cmd>w<cr>", { desc = "Save file" })
 map("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit" })
+map("n", "<leader>?", function() require("notes.cheatsheet").open() end, { desc = "Keybind cheatsheet" })
 
 -- File explorer
 map("n", "<leader>e",  "<cmd>NvimTreeToggle<cr>", { desc = "Toggle file explorer" })
