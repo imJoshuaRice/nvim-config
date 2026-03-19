@@ -63,12 +63,14 @@ map("n", "<leader>np",  function() require("notes.templates").new_permanent() en
 map("n", "<leader>nP",  function() require("notes.templates").new_project() end,          { desc = "New project" })
 map("n", "<leader>na",  function() require("notes.templates").new_area() end,             { desc = "New area / MoC" })
 map("n", "<leader>npp", function() require("notes.templates").promote_to_permanent() end, { desc = "Promote fleeting to permanent" })
+map("n", "<leader>nu", function() require("notes.templates").new_literature_from_url() end, { desc = "New literature note from URL" })
 
 -- Navigation
 map("n", "<leader>nt", function()
   vim.cmd("edit " .. vim.fn.fnameescape(notes_path("tasks.md")))
 end, { desc = "Open tasks.md" })
 map("n", "<leader>db", function() require("notes.dashboard").open() end, { desc = "Open dashboard" })
+map("n", "<leader>B", function() require("notes.backlinks").show() end, { desc = "Show backlinks" })
 
 -- Archive current note
 map("n", "<leader>mv", function() require("notes.templates").archive_note() end, { desc = "Archive current note" })
@@ -90,6 +92,16 @@ map("n", "<leader>gp", function()
 end, { desc = "Publish public notes" })
 
 -- Search (defined in plugins/telescope.lua)
+map("n", "<leader>st", function() require("notes.tagsearch").search() end, { desc = "Search by tag" })
+map("n", "<leader>tg+", function() require("notes.tagger").add_tag() end,    { desc = "Add tag to note" })
+map("n", "<leader>tg-", function() require("notes.tagger").remove_tag() end, { desc = "Remove tag from note" })
+-- Frontmatter / type search
+map("n", "<leader>sa",  function() require("notes.metasearch").search_all() end,        { desc = "Search all notes" })
+map("n", "<leader>sff", function() require("notes.metasearch").search_fleeting() end,   { desc = "Search fleeting notes" })
+map("n", "<leader>sl",  function() require("notes.metasearch").search_literature() end, { desc = "Search literature notes" })
+map("n", "<leader>sP",  function() require("notes.metasearch").search_permanent() end,  { desc = "Search permanent notes" })
+map("n", "<leader>spp", function() require("notes.metasearch").search_projects() end,   { desc = "Search projects" })
+map("n", "<leader>sar", function() require("notes.metasearch").search_areas() end,      { desc = "Search areas" })
 -- <leader>sf  search filenames
 -- <leader>sg  grep all notes
 -- <leader>sp  grep projects

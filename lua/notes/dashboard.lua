@@ -38,6 +38,63 @@ local function parse_tasks()
   return tasks
 end
 
+-- Parse active projects and count their open tasks
+local function parse_projects(tasks)
+  local root  = notes_root()
+  local files = vim.fn.globpath(root .. "\\projects", "*.md", false, true)
+  local projects = {}
+
+  -- Build task count per project
+  local task_counts = {}
+  for _, task in ipairs(tasks) do
+    local p = task.project
+    task_counts[p] = (task_counts[p] or 0) + 1
+  end
+
+  for _, filepath in ipairs(files) do
+    local f = io.open(filepath, "r")
+    if f then
+      local in_fm       = false
+      local checked     = false
+      local title       = vim.fn.fnamemodify(filepath, ":t:r")
+      local status      = "active"
+      local slug        = vim.fn.fnamemodify(filepath, ":t:r")
+      local line_count  = 0
+
+      for line in f:lines() do
+        line_count = line_count + 1
+        if not checked then
+          checked = true
+          if line:match("^---") then in_fm = true end
+        elseif in_fm then
+          if line:match("^---") then break end
+          local t = line:match("^title:%s*(.+)")
+          if t then title = t:gsub('"', ''):gsub("'", "") end
+          local s = line:match("^status:%s*(.+)")
+          if s then status = s:gsub("%s+", "") end
+        end
+        if line_count > 20 then break end
+      end
+      f:close()
+
+      if status == "active" then
+        table.insert(projects, {
+          title      = title,
+          slug       = slug,
+          task_count = task_counts[slug] or 0,
+          filepath   = filepath,
+        })
+      end
+    end
+  end
+
+  table.sort(projects, function(a, b)
+    return a.title < b.title
+  end)
+
+  return projects
+end
+
 local function sort_by_priority(tasks)
   table.sort(tasks, function(a, b) return priority_rank(a.priority) < priority_rank(b.priority) end)
   return tasks
@@ -58,7 +115,7 @@ local function section_header(icon, title, count)
   return string.format("  %s  %s  (%d)", icon, title, count)
 end
 
-local function build_dashboard(tasks)
+local function build_dashboard(tasks, projects)
   local lines = {}
   local t, t7 = today(), today_plus(7)
 
@@ -70,6 +127,19 @@ local function build_dashboard(tasks)
   table.insert(lines, "")
   table.insert(lines, divider("="))
   table.insert(lines, "")
+
+  -- Projects section
+  if #projects > 0 then
+    table.insert(lines, section_header("[P]", "ACTIVE PROJECTS", #projects))
+    table.insert(lines, divider("-"))
+    for _, project in ipairs(projects) do
+      local task_str = project.task_count == 0
+        and "  no open tasks"
+        or  ("  " .. project.task_count .. " open task" .. (project.task_count == 1 and "" or "s"))
+      table.insert(lines, string.format("    %-30s%s", project.title, task_str))
+    end
+    table.insert(lines, "")
+  end
 
   local overdue, due_today, due_week, upcoming, no_due = {}, {}, {}, {}, {}
   for _, task in ipairs(tasks) do
@@ -138,8 +208,9 @@ local function build_dashboard(tasks)
 end
 
 function M.open()
-  local tasks = parse_tasks()
-  local lines = build_dashboard(tasks)
+  local tasks    = parse_tasks()
+  local projects = parse_projects(tasks)
+  local lines    = build_dashboard(tasks, projects)
 
   local buf = nil
   for _, b in ipairs(vim.api.nvim_list_bufs()) do

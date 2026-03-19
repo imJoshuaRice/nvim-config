@@ -207,4 +207,49 @@ function M.archive_note()
   print("Archived: " .. filename)
 end
 
+function M.new_literature_from_url()
+  local url = vim.fn.input("URL: ")
+  if url == "" then return end
+
+  print("Fetching title...")
+
+  local scripts = (os.getenv("USERPROFILE") or vim.fn.expand("~")) .. "\\AppData\\Local\\nvim\\scripts\\"
+  local title   = vim.fn.system("powershell -NonInteractive -NoProfile -File " ..
+    scripts .. "fetch-title.ps1 -url \"" .. url .. "\"")
+  title = title:gsub("%s+$", "")  -- trim trailing whitespace
+
+  if title == "" then
+    title = vim.fn.input("Could not fetch title. Enter manually: ")
+    if title == "" then return end
+  else
+    local confirmed = vim.fn.input("Title: " .. title .. "  [Enter to confirm or type new title]: ")
+    if confirmed ~= "" then title = confirmed end
+  end
+
+  local slug     = title:gsub(" ", "-"):lower():gsub("[^%w%-]", "")
+  local filepath = notes_root() .. "\\zettelkasten\\literature\\" .. date() .. "-" .. slug .. ".md"
+
+  create_note(filepath, {
+    "---",
+    "type: literature",
+    "date: " .. date(),
+    "source: " .. title,
+    "url: " .. url,
+    "author: ",
+    "tags: []",
+    "---",
+    "",
+    "# " .. title,
+    "",
+    "## Summary",
+    "",
+    "## Key Ideas",
+    "",
+    "## Quotes",
+    "",
+    "## My Thoughts",
+    "",
+  })
+end
+
 return M

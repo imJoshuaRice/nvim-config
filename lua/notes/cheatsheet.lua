@@ -22,6 +22,7 @@ local keybinds = {
       { key = "Space mv",  desc = "Archive current note" },
       { key = "Enter",     desc = "Follow wikilink" },
       { key = "Backspace", desc = "Navigate back" },
+      { key = "Space B",   desc = "Show backlinks to current note" },
     },
   },
   {
