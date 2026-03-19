@@ -17,6 +17,7 @@ map("n", "<leader>nl", function() require("notes.templates").new_literature() en
 map("n", "<leader>np", function() require("notes.templates").new_permanent() end,  { desc = "New permanent note" })
 map("n", "<leader>nP", function() require("notes.templates").new_project() end,    { desc = "New project" })
 map("n", "<leader>na", function() require("notes.templates").new_area() end,       { desc = "New area / MoC" })
+map("n", "<leader>npp", function() require("notes.templates").promote_to_permanent() end, { desc = "Promote fleeting to permanent" })
 
 -- Navigation
 map("n", "<leader>nt", function()
@@ -53,3 +54,7 @@ end, { desc = "Publish public notes" })
 -- General
 map("n", "<leader>w", "<cmd>w<cr>", { desc = "Save file" })
 map("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit" })
+
+-- File explorer
+map("n", "<leader>e",  "<cmd>NvimTreeToggle<cr>", { desc = "Toggle file explorer" })
+map("n", "<leader>ef", "<cmd>NvimTreeFocus<cr>",  { desc = "Focus file explorer" })
