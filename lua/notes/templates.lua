@@ -99,23 +99,35 @@ function M.new_permanent_named(title)
   create_note(notes_root() .. "\\zettelkasten\\permanent\\" .. id .. ".md", permanent_template(title, id))
 end
 
+-- Parse frontmatter from a list of lines
+-- Returns a table of key/value pairs and the line index where frontmatter ends
+local function parse_frontmatter(lines)
+  local fm = {}
+  local end_line = 0
+  if not lines[1] or not lines[1]:match("^---") then
+    return fm, 0
+  end
+  for i = 2, #lines do
+    if lines[i]:match("^---") then
+      end_line = i
+      break
+    end
+    local k, v = lines[i]:match("^([%w_]+):%s*(.+)")
+    if k then fm[k] = v end
+  end
+  return fm, end_line
+end
+
 -- PROMOTE: fleeting ? permanent
 function M.promote_to_permanent()
   local current_path = vim.fn.expand("%:p")
-  local current_type = ""
+
+  -- Read current buffer lines
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local fm, fm_end = parse_frontmatter(lines)
 
   -- Check this is a fleeting note
-  local f = io.open(current_path, "r")
-  if not f then print("No file open"); return end
-  local count = 0
-  for line in f:lines() do
-    count = count + 1
-    local t = line:match("^type:%s*(.+)")
-    if t then current_type = t:gsub("%s+", ""); break end
-    if count > 10 then break end
-  end
-  f:close()
-
+  local current_type = fm["type"] or ""
   if current_type ~= "fleeting" then
     print("Promote only works on fleeting notes (this is: " .. current_type .. ")")
     return
@@ -125,52 +137,40 @@ function M.promote_to_permanent()
   local title = vim.fn.input("Permanent note title: ")
   if title == "" then return end
 
-  -- Read current buffer content (skip frontmatter)
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  -- Collect body content (everything after frontmatter, skip old heading)
   local content = {}
-  local in_frontmatter = false
-  local past_frontmatter = false
-  for _, line in ipairs(lines) do
-    if not past_frontmatter then
-      if line:match("^---") and not in_frontmatter then
-        in_frontmatter = true
-      elseif line:match("^---") and in_frontmatter then
-        past_frontmatter = true
-      end
-    else
-      table.insert(content, line)
+  for i = fm_end + 1, #lines do
+    if not lines[i]:match("^#%s+") then
+      table.insert(content, lines[i])
     end
   end
 
-  -- Create permanent note
-  local id       = timestamp()
-  local filepath = notes_root() .. "\\zettelkasten\\permanent\\" .. id .. ".md"
-  local dir      = vim.fn.fnamemodify(filepath, ":h")
-  vim.fn.mkdir(dir, "p")
+  -- Build new frontmatter — carry over tags and public flag if present
+  local id = timestamp()
+  local new_lines = { "---" }
+  table.insert(new_lines, "type: permanent")
+  table.insert(new_lines, "id: " .. id)
+  table.insert(new_lines, "title: " .. title)
+  table.insert(new_lines, "date: " .. date())
+  table.insert(new_lines, "tags: " .. (fm["tags"] or "[]"))
+  table.insert(new_lines, "links: []")
+  -- Carry over public flag if present
+  if fm["public"] then
+    table.insert(new_lines, "public: " .. fm["public"])
+  end
+  table.insert(new_lines, "---")
+  table.insert(new_lines, "")
+  table.insert(new_lines, "# " .. title)
+  table.insert(new_lines, "")
 
-  -- Build the new file content
-  local new_lines = {
-    "---",
-    "type: permanent",
-    "id: " .. id,
-    "title: " .. title,
-    "date: " .. date(),
-    "tags: []",
-    "links: []",
-    "---",
-    "",
-    "# " .. title,
-    "",
-  }
-
-  -- Append the fleeting content (skip the old heading)
+  -- Append body content
   for _, line in ipairs(content) do
-    if not line:match("^#%s+") then
-      table.insert(new_lines, line)
-    end
+    table.insert(new_lines, line)
   end
 
-  -- Write and open the permanent note
+  -- Write permanent note
+  local filepath = notes_root() .. "\\zettelkasten\\permanent\\" .. id .. ".md"
+  vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
   local out = io.open(filepath, "w")
   if out then
     for _, line in ipairs(new_lines) do
@@ -187,7 +187,7 @@ function M.promote_to_permanent()
     "&Yes\n&No", 1
   )
   if choice == 1 then
-    local filename    = vim.fn.fnamemodify(current_path, ":t")
+    local filename     = vim.fn.fnamemodify(current_path, ":t")
     local archive_path = notes_root() .. "\\archive\\" .. filename
     vim.fn.mkdir(notes_root() .. "\\archive", "p")
     vim.fn.rename(current_path, archive_path)
