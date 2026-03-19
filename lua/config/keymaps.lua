@@ -4,6 +4,13 @@ local function notes_path(subpath)
   return (os.getenv("USERPROFILE") or vim.fn.expand("~")) .. "\\notes\\" .. subpath
 end
 
+local nvim_scripts = (os.getenv("USERPROFILE") or vim.fn.expand("~")) .. "\\AppData\\Local\\nvim\\scripts\\"
+
+local function run_script(script)
+  local result = vim.fn.system("powershell -File " .. nvim_scripts .. script)
+  print(result)
+end
+
 -- Note creation
 map("n", "<leader>nf", function() require("notes.templates").new_fleeting() end,   { desc = "New fleeting note" })
 map("n", "<leader>nl", function() require("notes.templates").new_literature() end, { desc = "New literature note" })
@@ -26,22 +33,16 @@ map("n", "<leader>tt", function() require("notes.tasks").toggle_task() end, { de
 map("n", "<leader>to", function() require("notes.tasks").show_tasks() end,  { desc = "Show open tasks" })
 
 -- Git sync
-map("n", "<leader>gn", function()
-  local result = vim.fn.system("powershell -File " ..
-    vim.fn.expand("~") .. "\\AppData\\Local\\nvim\\scripts\\sync-notes.ps1")
-  print(result)
-end, { desc = "Sync notes vault" })
-
-map("n", "<leader>gc", function()
-  local result = vim.fn.system("powershell -File " ..
-    vim.fn.expand("~") .. "\\AppData\\Local\\nvim\\scripts\\sync-config.ps1")
-  print(result)
-end, { desc = "Sync nvim config" })
+map("n", "<leader>gs", function()
+  print("Syncing notes vault...")
+  run_script("sync-notes.ps1")
+  print("Syncing nvim config...")
+  run_script("sync-config.ps1")
+  print("Sync complete.")
+end, { desc = "Sync all to GitHub" })
 
 map("n", "<leader>gp", function()
-  local result = vim.fn.system("powershell -File " ..
-    vim.fn.expand("~") .. "\\AppData\\Local\\nvim\\scripts\\publish-notes.ps1")
-  print(result)
+  run_script("publish-notes.ps1")
 end, { desc = "Publish public notes" })
 
 -- Search (defined in plugins/telescope.lua)
