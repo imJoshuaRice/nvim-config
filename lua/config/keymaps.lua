@@ -25,6 +25,25 @@ map("n", "<leader>ta", function() require("notes.tasks").add_task() end,    { de
 map("n", "<leader>tt", function() require("notes.tasks").toggle_task() end, { desc = "Toggle task" })
 map("n", "<leader>to", function() require("notes.tasks").show_tasks() end,  { desc = "Show open tasks" })
 
+-- Git sync
+map("n", "<leader>gn", function()
+  local result = vim.fn.system("powershell -File " ..
+    vim.fn.expand("~") .. "\\AppData\\Local\\nvim\\scripts\\sync-notes.ps1")
+  print(result)
+end, { desc = "Sync notes vault" })
+
+map("n", "<leader>gc", function()
+  local result = vim.fn.system("powershell -File " ..
+    vim.fn.expand("~") .. "\\AppData\\Local\\nvim\\scripts\\sync-config.ps1")
+  print(result)
+end, { desc = "Sync nvim config" })
+
+map("n", "<leader>gp", function()
+  local result = vim.fn.system("powershell -File " ..
+    vim.fn.expand("~") .. "\\AppData\\Local\\nvim\\scripts\\publish-notes.ps1")
+  print(result)
+end, { desc = "Publish public notes" })
+
 -- Search (defined in plugins/telescope.lua)
 -- <leader>sf  search filenames
 -- <leader>sg  grep all notes
