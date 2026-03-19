@@ -1,6 +1,7 @@
 local augroup = vim.api.nvim_create_augroup
 local autocmd = vim.api.nvim_create_autocmd
 
+-- Markdown settings
 local markdown_group = augroup("MarkdownSettings", { clear = true })
 autocmd("FileType", {
   group   = markdown_group,
@@ -14,6 +15,18 @@ autocmd("FileType", {
   end,
 })
 
+-- Auto-refresh nvim-tree when files change in the notes vault
+local tree_group = augroup("NvimTreeRefresh", { clear = true })
+autocmd({ "BufWritePost", "BufNewFile" }, {
+  group   = tree_group,
+  pattern = "*.md",
+  callback = function()
+    local ok, api = pcall(require, "nvim-tree.api")
+    if ok then api.tree.reload() end
+  end,
+})
+
+-- Auto-open dashboard when Neovim starts with no file argument
 local dashboard_group = augroup("DashboardAutoOpen", { clear = true })
 autocmd("UIEnter", {
   group    = dashboard_group,

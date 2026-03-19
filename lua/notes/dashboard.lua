@@ -44,10 +44,10 @@ local function sort_by_priority(tasks)
 end
 
 local function format_task(task)
-  local icons = { high = "!!", medium = "! ", low = "  " }
-  local pri   = icons[task.priority] or "  "
-  local due   = task.due and ("  » " .. task.due) or ""
-  return string.format("  %s  %s%s", pri, task.desc, due)
+  local pri_icons = { high = "[!!]", medium = "[! ]", low = "[  ]" }
+  local pri  = pri_icons[task.priority] or "[  ]"
+  local due  = task.due and ("  due:" .. task.due) or ""
+  return string.format("    %s  %s%s", pri, task.desc, due)
 end
 
 local function divider(char, width)
@@ -62,14 +62,13 @@ local function build_dashboard(tasks)
   local lines = {}
   local t, t7 = today(), today_plus(7)
 
-  -- Header
   table.insert(lines, "")
-  table.insert(lines, divider("-"))
+  table.insert(lines, divider("="))
   table.insert(lines, "")
-  table.insert(lines, "      N E O V I M   D A S H B O A R D")
-  table.insert(lines, "      " .. os.date("%A, %d %B %Y"))
+  table.insert(lines, "       N E O V I M   D A S H B O A R D")
+  table.insert(lines, "       " .. os.date("%A, %d %B %Y"))
   table.insert(lines, "")
-  table.insert(lines, divider("-"))
+  table.insert(lines, divider("="))
   table.insert(lines, "")
 
   local overdue, due_today, due_week, upcoming, no_due = {}, {}, {}, {}, {}
@@ -95,13 +94,13 @@ local function build_dashboard(tasks)
     table.insert(lines, "")
   end
 
-  section("?", "OVERDUE",       overdue)
-  section("?", "DUE TODAY",     due_today)
-  section("?", "DUE THIS WEEK", due_week)
-  section("?", "UPCOMING",      upcoming)
+  section("[!]", "OVERDUE",       overdue)
+  section("[>]", "DUE TODAY",     due_today)
+  section("[~]", "DUE THIS WEEK", due_week)
+  section("[.]", "UPCOMING",      upcoming)
 
   if #no_due > 0 then
-    table.insert(lines, section_header("?", "NO DUE DATE", #no_due))
+    table.insert(lines, section_header("[-]", "NO DUE DATE", #no_due))
     table.insert(lines, divider("-"))
     local by_project, project_order = {}, {}
     for _, task in ipairs(no_due) do
@@ -112,7 +111,7 @@ local function build_dashboard(tasks)
       table.insert(by_project[task.project], task)
     end
     for _, project in ipairs(project_order) do
-      table.insert(lines, "  @" .. project)
+      table.insert(lines, "    @" .. project)
       for _, task in ipairs(sort_by_priority(by_project[project])) do
         table.insert(lines, "  " .. format_task(task))
       end
@@ -121,20 +120,19 @@ local function build_dashboard(tasks)
   end
 
   if #tasks == 0 then
-    table.insert(lines, "  ?  No open tasks — enjoy your day!")
+    table.insert(lines, "    [+]  No open tasks -- enjoy your day!")
     table.insert(lines, "")
   end
 
-  -- Footer
-  table.insert(lines, divider("-"))
+  table.insert(lines, divider("="))
   table.insert(lines, "")
-  table.insert(lines, "  QUICK ACTIONS")
-  table.insert(lines, "  Space ta  add task      Space nf  fleeting note")
-  table.insert(lines, "  Space np  permanent     Space db  dashboard")
-  table.insert(lines, "  Space gs  sync to git   Space gp  publish notes")
-  table.insert(lines, "  Space ?   keybind help")
+  table.insert(lines, "   QUICK ACTIONS")
+  table.insert(lines, "   Space ta  add task        Space nf  fleeting note")
+  table.insert(lines, "   Space np  permanent        Space db  dashboard")
+  table.insert(lines, "   Space gs  sync to git      Space gp  publish notes")
+  table.insert(lines, "   Space ?   keybind help")
   table.insert(lines, "")
-  table.insert(lines, divider("-"))
+  table.insert(lines, divider("="))
   table.insert(lines, "")
   return lines
 end

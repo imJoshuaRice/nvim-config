@@ -43,14 +43,70 @@ function M.toggle_task()
   vim.api.nvim_buf_set_lines(0, row - 1, row, false, { new_line })
 end
 
+function M.archive_completed()
+  local path = tasks_path()
+  local active, completed, other = {}, {}, {}
+  local in_archive = false
+
+  local f = io.open(path, "r")
+  if not f then print("Could not open " .. path); return end
+  for line in f:lines() do
+    if line:match("^## Archive") then
+      in_archive = true
+    elseif in_archive then
+      -- Keep existing archive lines
+      table.insert(completed, line)
+    elseif line:match("^%s*%- %[x%]") then
+      table.insert(completed, line)
+    else
+      table.insert(active, line)
+    end
+  end
+  f:close()
+
+  if #completed == 0 then
+    print("No completed tasks to archive.")
+    return
+  end
+
+  local choice = vim.fn.confirm(
+    "Archive " .. #completed .. " completed task(s)?",
+    "&Yes\n&No", 2
+  )
+  if choice ~= 1 then return end
+
+  -- Write active tasks, then archive section
+  local out = io.open(path, "w")
+  if not out then print("Could not write " .. path); return end
+
+  for _, line in ipairs(active) do
+    out:write(line .. "\n")
+  end
+
+  out:write("\n## Archive\n\n")
+  for _, line in ipairs(completed) do
+    out:write(line .. "\n")
+  end
+  out:close()
+
+  -- Reload buffer if tasks.md is open
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(buf):match("tasks%.md$") then
+      vim.api.nvim_buf_call(buf, function()
+        vim.cmd("edit!")
+      end)
+    end
+  end
+
+  print("Archived " .. #completed .. " completed task(s).")
+end
+
 function M.show_tasks()
-  -- Read all open tasks with their line numbers in tasks.md
-  local task_lines  = {}  -- display lines
-  local task_map    = {}  -- maps display row ? line number in tasks.md
+  local task_lines = {}
+  local task_map   = {}
 
   local f = io.open(tasks_path(), "r")
   if not f then print("Could not open " .. tasks_path()); return end
-
   local line_num = 0
   for line in f:lines() do
     line_num = line_num + 1
@@ -67,9 +123,8 @@ function M.show_tasks()
   local width  = math.floor(vim.o.columns * 0.8)
   local height = math.min(#task_lines + 4, math.floor(vim.o.lines * 0.6))
 
-  -- Add header
   local display_lines = {}
-  table.insert(display_lines, "  Open Tasks | Enter:jump  x:complete  q/Esc:close")
+  table.insert(display_lines, "  Open Tasks  |  Enter:jump  x:complete  q/Esc:close")
   table.insert(display_lines, "  " .. string.rep("-", width - 4))
   for _, line in ipairs(task_lines) do
     table.insert(display_lines, line)
@@ -91,15 +146,13 @@ function M.show_tasks()
     title_pos = "center",
   })
 
-  -- Helper: get task index from current cursor row (offset by 2 header lines)
   local function get_task_index()
     local row = vim.api.nvim_win_get_cursor(win)[1]
-    local idx = row - 2  -- subtract 2 header lines
+    local idx = row - 2
     if idx < 1 or idx > #task_lines then return nil end
     return idx
   end
 
-  -- Jump to task in tasks.md
   vim.keymap.set("n", "<CR>", function()
     local idx = get_task_index()
     if not idx then return end
@@ -110,7 +163,6 @@ function M.show_tasks()
     vim.cmd("normal! zz")
   end, { buffer = buf, silent = true })
 
-  -- Complete task with confirmation
   vim.keymap.set("n", "x", function()
     local idx = get_task_index()
     if not idx then return end
@@ -121,7 +173,6 @@ function M.show_tasks()
     )
     if choice ~= 1 then return end
 
-    -- Update the line in tasks.md
     local target_line = task_map[idx]
     local lines = {}
     local f2 = io.open(tasks_path(), "r")
@@ -138,19 +189,15 @@ function M.show_tasks()
 
     local out = io.open(tasks_path(), "w")
     if out then
-      for _, line in ipairs(lines) do
-        out:write(line .. "\n")
-      end
+      for _, line in ipairs(lines) do out:write(line .. "\n") end
       out:close()
     end
 
-    -- Refresh the task list
     vim.api.nvim_win_close(win, true)
     print("Task completed: " .. task_desc)
     M.show_tasks()
   end, { buffer = buf, silent = true })
 
-  -- Close
   vim.keymap.set("n", "q",     function() vim.api.nvim_win_close(win, true) end, { buffer = buf, silent = true })
   vim.keymap.set("n", "<Esc>", function() vim.api.nvim_win_close(win, true) end, { buffer = buf, silent = true })
 end

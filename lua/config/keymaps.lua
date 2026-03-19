@@ -77,6 +77,7 @@ map("n", "<leader>mv", function() require("notes.templates").archive_note() end,
 map("n", "<leader>ta", function() require("notes.tasks").add_task() end,    { desc = "Add task" })
 map("n", "<leader>tt", function() require("notes.tasks").toggle_task() end, { desc = "Toggle task" })
 map("n", "<leader>to", function() require("notes.tasks").show_tasks() end,  { desc = "Show open tasks" })
+map("n", "<leader>tc", function() require("notes.tasks").archive_completed() end, { desc = "Archive completed tasks" })
 
 -- Git sync
 map("n", "<leader>gs", function()
