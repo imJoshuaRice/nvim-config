@@ -1,7 +1,6 @@
 local augroup = vim.api.nvim_create_augroup
 local autocmd = vim.api.nvim_create_autocmd
 
--- Markdown settings
 local markdown_group = augroup("MarkdownSettings", { clear = true })
 autocmd("FileType", {
   group   = markdown_group,
@@ -12,6 +11,19 @@ autocmd("FileType", {
     vim.opt_local.spell       = true
     vim.opt_local.spelllang   = "en_gb"
     vim.opt_local.conceallevel = 2
+  end,
+})
+
+-- Track recently opened notes
+local recents_group = augroup("RecentNotes", { clear = true })
+autocmd("BufEnter", {
+  group   = recents_group,
+  pattern = "*.md",
+  callback = function()
+    local path = vim.fn.expand("%:p")
+    vim.schedule(function()
+      pcall(function() require("notes.recents").record(path) end)
+    end)
   end,
 })
 
