@@ -62,7 +62,7 @@ map("n", "<leader>nl",  function() require("notes.templates").new_literature() e
 map("n", "<leader>np",  function() require("notes.templates").new_permanent() end,        { desc = "New permanent note" })
 map("n", "<leader>nP",  function() require("notes.templates").new_project() end,          { desc = "New project" })
 map("n", "<leader>na",  function() require("notes.templates").new_area() end,             { desc = "New area / MoC" })
-map("n", "<leader>npp", function() require("notes.templates").promote_to_permanent() end, { desc = "Promote fleeting to permanent" })
+map("n", "<leader>npp", function() require("notes.templates").promote() end, { desc = "Promote fleeting to permanent" })
 map("n", "<leader>nu", function() require("notes.templates").new_literature_from_url() end, { desc = "New literature note from URL" })
 
 -- Navigation
