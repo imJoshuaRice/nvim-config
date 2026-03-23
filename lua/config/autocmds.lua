@@ -14,7 +14,6 @@ autocmd("FileType", {
   end,
 })
 
--- Track recently opened notes
 local recents_group = augroup("RecentNotes", { clear = true })
 autocmd("BufEnter", {
   group   = recents_group,
@@ -27,18 +26,16 @@ autocmd("BufEnter", {
   end,
 })
 
--- Auto-refresh nvim-tree when files change in the notes vault
 local tree_group = augroup("NvimTreeRefresh", { clear = true })
 autocmd({ "BufWritePost", "BufNewFile" }, {
   group   = tree_group,
   pattern = "*.md",
   callback = function()
-    local ok, api = pcall(require, "nvim-tree.api")
-    if ok then api.tree.reload() end
+    local ok, manager = pcall(require, "neo-tree.sources.manager")
+    if ok then pcall(manager.refresh, "filesystem") end
   end,
 })
 
--- Auto-open dashboard when Neovim starts with no file argument
 local dashboard_group = augroup("DashboardAutoOpen", { clear = true })
 autocmd("UIEnter", {
   group    = dashboard_group,

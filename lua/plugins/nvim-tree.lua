@@ -1,52 +1,89 @@
 return {
   {
-    "nvim-tree/nvim-tree.lua",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
+    "nvim-neo-tree/neo-tree.nvim",
+    branch = "v3.x",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-tree/nvim-web-devicons",
+      "MunifTanjim/nui.nvim",
+    },
     config = function()
-      vim.g.loaded_netrw       = 1
-      vim.g.loaded_netrwPlugin = 1
-
       local notes_root = (os.getenv("USERPROFILE") or vim.fn.expand("~")) .. "\\notes"
 
-      require("nvim-tree").setup({
-        sort_by = "name",
-        sync_root_with_cwd   = false,
-        respect_buf_cwd      = false,
-        prefer_startup_root  = false,
-        view = {
-          width = 35,
-          side  = "left",
-        },
-        renderer = {
-          group_empty = true,
-          icons = {
-            show = {
-              file         = true,
-              folder       = true,
-              folder_arrow = true,
+      require("neo-tree").setup({
+        close_if_last_window = false,
+        popup_border_style   = "rounded",
+        enable_git_status    = true,
+        enable_diagnostics   = false,
+        default_component_configs = {
+          indent = {
+            indent_size        = 2,
+            padding            = 1,
+            with_markers       = true,
+            indent_marker      = "|",
+            last_indent_marker = "L",
+          },
+          icon = {
+            folder_closed = "",
+            folder_open   = "",
+            folder_empty  = "",
+          },
+          git_status = {
+            symbols = {
+              added     = "",
+              modified  = "",
+              deleted   = "x",
+              renamed   = "r",
+              untracked = "?",
+              ignored   = "",
+              unstaged  = "m",
+              staged    = "s",
+              conflict  = "!",
             },
           },
         },
-        filters = {
-          dotfiles = true,
-          custom   = { ".git", "node_modules" },
-        },
-        actions = {
-          open_file = {
-            quit_on_open  = false,
-            window_picker = { enable = false },
+        window = {
+          position = "left",
+          width    = 35,
+          mappings = {
+            ["<space>"] = "none",
+            ["/"]       = "fuzzy_finder",
+            ["#"]       = "fuzzy_finder_directory",
+            ["f"]       = "filter_on_submit",
+            ["<esc>"]   = "clear_filter",
           },
+        },
+        filesystem = {
+          filtered_items = {
+            visible        = false,
+            hide_dotfiles  = true,
+            hide_gitignored = true,
+            hide_by_name   = { ".git" },
+          },
+          follow_current_file = {
+            enabled = true,
+          },
+          use_libuv_file_watcher = true,
         },
       })
 
-      -- Always open tree rooted at notes vault
+      -- Always open rooted at notes vault
       vim.keymap.set("n", "<leader>e", function()
-        require("nvim-tree.api").tree.toggle({ path = notes_root })
+        require("neo-tree.command").execute({
+          action = "focus",
+          source = "filesystem",
+          position = "left",
+          dir = notes_root,
+        })
       end, { desc = "Toggle file explorer" })
 
       vim.keymap.set("n", "<leader>ef", function()
-        require("nvim-tree.api").tree.open({ path = notes_root })
-        require("nvim-tree.api").tree.focus()
+        require("neo-tree.command").execute({
+          action = "show",
+          source = "filesystem",
+          position = "left",
+          dir = notes_root,
+        })
       end, { desc = "Focus file explorer" })
     end,
   },
