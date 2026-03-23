@@ -45,7 +45,7 @@ end
 
 function M.archive_completed()
   local path = tasks_path()
-  local active, completed, other = {}, {}, {}
+  local active, completed = {}, {}
   local in_archive = false
 
   local f = io.open(path, "r")
@@ -54,8 +54,14 @@ function M.archive_completed()
     if line:match("^## Archive") then
       in_archive = true
     elseif in_archive then
-      -- Keep existing archive lines
-      table.insert(completed, line)
+      -- Only keep completed tasks in archive
+      -- Move any incomplete tasks back to active
+      if line:match("^%s*%- %[ %]") then
+        table.insert(active, line)
+      elseif line:match("^%s*%- %[x%]") then
+        table.insert(completed, line)
+      end
+      -- Skip blank lines and other content in archive (will be regenerated)
     elseif line:match("^%s*%- %[x%]") then
       table.insert(completed, line)
     else
@@ -64,40 +70,23 @@ function M.archive_completed()
   end
   f:close()
 
-  if #completed == 0 then
-    print("No completed tasks to archive.")
-    return
-  end
+  if #completed == 0 then print("No completed tasks to archive."); return end
 
-  local choice = vim.fn.confirm(
-    "Archive " .. #completed .. " completed task(s)?",
-    "&Yes\n&No", 2
-  )
+  local choice = vim.fn.confirm("Archive " .. #completed .. " completed task(s)?", "&Yes\n&No", 2)
   if choice ~= 1 then return end
 
-  -- Write active tasks, then archive section
   local out = io.open(path, "w")
   if not out then print("Could not write " .. path); return end
-
-  for _, line in ipairs(active) do
-    out:write(line .. "\n")
-  end
-
+  for _, line in ipairs(active) do out:write(line .. "\n") end
   out:write("\n## Archive\n\n")
-  for _, line in ipairs(completed) do
-    out:write(line .. "\n")
-  end
+  for _, line in ipairs(completed) do out:write(line .. "\n") end
   out:close()
 
-  -- Reload buffer if tasks.md is open
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_get_name(buf):match("tasks%.md$") then
-      vim.api.nvim_buf_call(buf, function()
-        vim.cmd("edit!")
-      end)
+      vim.api.nvim_buf_call(buf, function() vim.cmd("edit!") end)
     end
   end
-
   print("Archived " .. #completed .. " completed task(s).")
 end
 

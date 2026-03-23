@@ -16,6 +16,7 @@ opt.splitright     = true
 opt.splitbelow     = true
 opt.scrolloff      = 8
 opt.updatetime     = 300
+opt.swapfile       = false
 
 vim.g.mapleader      = " "
 vim.g.maplocalleader = " "

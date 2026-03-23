@@ -162,65 +162,78 @@ local function build_dashboard(tasks, projects, recents)
   local stats = string.format("  %d open task%s    %d active project%s",
     #tasks, (#tasks == 1 and "" or "s"),
     #projects, (#projects == 1 and "" or "s"))
-  if #overdue > 0 then stats = stats .. string.format("    %d overdue", #overdue) end
+  if #overdue  > 0 then stats = stats .. string.format("    %d overdue",   #overdue)   end
   if #due_today > 0 then stats = stats .. string.format("    %d due today", #due_today) end
   add(stats, "DashboardStats")
   add("", "DashboardBorder")
-  add("  " .. string.rep("-", 76), "DashboardBorder")
+  add("  " .. string.rep("-", 116), "DashboardBorder")
   add("", "DashboardBorder")
 
-  local col_width   = 46
+  -- Column widths: left=38, mid=38, right=34
+  local lw, mw, rw = 38, 38, 34
   local left_lines  = {}
+  local mid_lines   = {}
   local right_lines = {}
 
-  table.insert(left_lines,  { "  TASKS",    "DashboardSection" })
-  table.insert(left_lines,  { "  " .. string.rep("-", col_width - 2), "DashboardBorder" })
-  table.insert(right_lines, { "  PROJECTS", "DashboardSection" })
-  table.insert(right_lines, { "  " .. string.rep("-", col_width - 2), "DashboardBorder" })
+  -- LEFT: summary + overdue + due today
+  table.insert(left_lines, { "  TASKS", "DashboardSection" })
+  table.insert(left_lines, { "  " .. string.rep("-", lw - 2), "DashboardBorder" })
 
-  local function summary_line(icon, label, count, hl)
+  local function summary_line(col, icon, label, count, hl)
     if count > 0 then
-      table.insert(left_lines, { string.format("  %s  %-20s %d", icon, label, count), hl })
+      table.insert(col, { string.format("  %s  %-18s %d", icon, label, count), hl })
     end
   end
 
-  summary_line("[!]", "overdue",       #overdue,   "DashboardOverdue")
-  summary_line("[>]", "due today",     #due_today, "DashboardToday")
-  summary_line("[~]", "due this week", #due_week,  "DashboardWeek")
-  summary_line("[.]", "upcoming",      #upcoming,  "DashboardNormal")
-  summary_line("[-]", "no due date",   #no_due,    "DashboardMuted")
+  summary_line(left_lines, "[!]", "overdue",       #overdue,   "DashboardOverdue")
+  summary_line(left_lines, "[>]", "due today",     #due_today, "DashboardToday")
+  summary_line(left_lines, "[~]", "due this week", #due_week,  "DashboardWeek")
+  summary_line(left_lines, "[.]", "upcoming",      #upcoming,  "DashboardNormal")
+  summary_line(left_lines, "[-]", "no due date",   #no_due,    "DashboardMuted")
   table.insert(left_lines, { "", "DashboardNormal" })
 
   if #overdue > 0 then
     table.insert(left_lines, { "  OVERDUE", "DashboardOverdue" })
-    table.insert(left_lines, { "  " .. string.rep("-", col_width - 2), "DashboardBorder" })
+    table.insert(left_lines, { "  " .. string.rep("-", lw - 2), "DashboardBorder" })
     for _, task in ipairs(sort_by_priority(overdue)) do
-      table.insert(left_lines, { "  " .. format_task_line(task, col_width), "DashboardOverdue" })
+      table.insert(left_lines, { "  " .. format_task_line(task, lw), "DashboardOverdue" })
     end
     table.insert(left_lines, { "", "DashboardNormal" })
   end
 
   if #due_today > 0 then
     table.insert(left_lines, { "  DUE TODAY", "DashboardToday" })
-    table.insert(left_lines, { "  " .. string.rep("-", col_width - 2), "DashboardBorder" })
+    table.insert(left_lines, { "  " .. string.rep("-", lw - 2), "DashboardBorder" })
     for _, task in ipairs(sort_by_priority(due_today)) do
-      table.insert(left_lines, { "  " .. format_task_line(task, col_width), "DashboardToday" })
+      table.insert(left_lines, { "  " .. format_task_line(task, lw), "DashboardToday" })
     end
     table.insert(left_lines, { "", "DashboardNormal" })
   end
 
-  if #due_week > 0 then
-    table.insert(left_lines, { "  DUE THIS WEEK", "DashboardWeek" })
-    table.insert(left_lines, { "  " .. string.rep("-", col_width - 2), "DashboardBorder" })
+  -- MID: due this week + upcoming + no due date
+  table.insert(mid_lines, { "  THIS WEEK", "DashboardWeek" })
+  table.insert(mid_lines, { "  " .. string.rep("-", mw - 2), "DashboardBorder" })
+  if #due_week == 0 then
+    table.insert(mid_lines, { "  nothing due this week", "DashboardMuted" })
+  else
     for _, task in ipairs(sort_by_priority(due_week)) do
-      table.insert(left_lines, { "  " .. format_task_line(task, col_width), "DashboardWeek" })
+      table.insert(mid_lines, { "  " .. format_task_line(task, mw), "DashboardWeek" })
     end
-    table.insert(left_lines, { "", "DashboardNormal" })
+  end
+  table.insert(mid_lines, { "", "DashboardNormal" })
+
+  if #upcoming > 0 then
+    table.insert(mid_lines, { "  UPCOMING", "DashboardNormal" })
+    table.insert(mid_lines, { "  " .. string.rep("-", mw - 2), "DashboardBorder" })
+    for _, task in ipairs(sort_by_priority(upcoming)) do
+      table.insert(mid_lines, { "  " .. format_task_line(task, mw), "DashboardNormal" })
+    end
+    table.insert(mid_lines, { "", "DashboardNormal" })
   end
 
   if #no_due > 0 then
-    table.insert(left_lines, { "  NO DUE DATE", "DashboardMuted" })
-    table.insert(left_lines, { "  " .. string.rep("-", col_width - 2), "DashboardBorder" })
+    table.insert(mid_lines, { "  NO DUE DATE", "DashboardMuted" })
+    table.insert(mid_lines, { "  " .. string.rep("-", mw - 2), "DashboardBorder" })
     local by_project, project_order = {}, {}
     for _, task in ipairs(no_due) do
       if not by_project[task.project] then
@@ -230,16 +243,19 @@ local function build_dashboard(tasks, projects, recents)
       table.insert(by_project[task.project], task)
     end
     for _, project in ipairs(project_order) do
-      table.insert(left_lines, { "  @" .. project, "DashboardMuted" })
+      table.insert(mid_lines, { "  @" .. project, "DashboardMuted" })
       for _, task in ipairs(sort_by_priority(by_project[project])) do
         local desc = task.desc
-        if #desc > col_width - 8 then desc = desc:sub(1, col_width - 10) .. ".." end
-        table.insert(left_lines, { "    [  ] " .. desc, "DashboardMuted" })
+        if #desc > mw - 8 then desc = desc:sub(1, mw - 10) .. ".." end
+        table.insert(mid_lines, { "    [  ] " .. desc, "DashboardMuted" })
       end
     end
-    table.insert(left_lines, { "", "DashboardNormal" })
+    table.insert(mid_lines, { "", "DashboardNormal" })
   end
 
+  -- RIGHT: projects + recent notes
+  table.insert(right_lines, { "  PROJECTS", "DashboardSection" })
+  table.insert(right_lines, { "  " .. string.rep("-", rw - 2), "DashboardBorder" })
   if #projects == 0 then
     table.insert(right_lines, { "  no active projects", "DashboardMuted" })
   else
@@ -247,38 +263,44 @@ local function build_dashboard(tasks, projects, recents)
       local task_str = project.task_count == 0 and "no tasks"
         or (project.task_count .. " task" .. (project.task_count == 1 and "" or "s"))
       local title = project.title
-      if #title > col_width - 14 then title = title:sub(1, col_width - 16) .. ".." end
-      table.insert(right_lines, { string.format("  %-32s %s", title, task_str), "DashboardProject" })
+      if #title > rw - 12 then title = title:sub(1, rw - 14) .. ".." end
+      table.insert(right_lines, { string.format("  %-20s %s", title, task_str), "DashboardProject" })
     end
   end
   table.insert(right_lines, { "", "DashboardNormal" })
   table.insert(right_lines, { "  RECENT NOTES", "DashboardSection" })
-  table.insert(right_lines, { "  " .. string.rep("-", col_width - 2), "DashboardBorder" })
+  table.insert(right_lines, { "  " .. string.rep("-", rw - 2), "DashboardBorder" })
   if #recents == 0 then
     table.insert(right_lines, { "  no recent notes", "DashboardMuted" })
   else
     for _, filepath in ipairs(recents) do
       local name = vim.fn.fnamemodify(filepath, ":t:r")
-      if #name > col_width - 4 then name = name:sub(1, col_width - 6) .. ".." end
+      if #name > rw - 4 then name = name:sub(1, rw - 6) .. ".." end
       table.insert(right_lines, { "  " .. name, "DashboardRecent" })
     end
   end
 
-  local max_lines = math.max(#left_lines, #right_lines)
-  local empty     = { string.rep(" ", col_width), "DashboardNormal" }
+  -- Merge three columns
+  local max_lines = math.max(#left_lines, #mid_lines, #right_lines)
+  local empty_l = { string.rep(" ", lw), "DashboardNormal" }
+  local empty_m = { string.rep(" ", mw), "DashboardNormal" }
+  local empty_r = { string.rep(" ", rw), "DashboardNormal" }
 
   for i = 1, max_lines do
-    local l = left_lines[i]  or empty
-    local r = right_lines[i] or empty
-    local padded_left = l[1] .. string.rep(" ", math.max(0, col_width - #l[1]))
-    local full_line   = padded_left .. "  " .. r[1]
+    local l = left_lines[i]  or empty_l
+    local m = mid_lines[i]   or empty_m
+    local r = right_lines[i] or empty_r
+    local pl = l[1] .. string.rep(" ", math.max(0, lw - #l[1]))
+    local pm = m[1] .. string.rep(" ", math.max(0, mw - #m[1]))
+    local full_line = pl .. "  " .. pm .. "  " .. r[1]
     table.insert(lines, full_line)
-    table.insert(hl_map, { #lines, 0, #padded_left, l[2] })
-    table.insert(hl_map, { #lines, #padded_left + 2, #full_line, r[2] })
+    table.insert(hl_map, { #lines, 0, #pl, l[2] })
+    table.insert(hl_map, { #lines, #pl + 2, #pl + 2 + #pm, m[2] })
+    table.insert(hl_map, { #lines, #pl + 2 + #pm + 2, #full_line, r[2] })
   end
 
   add("", "DashboardBorder")
-  add("  " .. string.rep("-", 76), "DashboardBorder")
+  add("  " .. string.rep("-", 116), "DashboardBorder")
   local footer = "  nf:fleeting  nl:literature  np:permanent  ta:add task  gs:sync  gp:publish  r:refresh  ?:help"
   table.insert(lines, footer)
   local hl_footer = #lines
