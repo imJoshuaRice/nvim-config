@@ -40,11 +40,13 @@ local function get_title(filepath)
   return title or heading
 end
 
--- Search all notes for links to the current file
+-- Search all notes for [[stem]] links and @project:stem task associations
 local function find_backlinks(stem)
-  local root    = notes_root()
-  local files   = vim.fn.globpath(root, "**/*.md", false, true)
-  local results = {}
+  local root      = notes_root()
+  local files     = vim.fn.globpath(root, "**/*.md", false, true)
+  local links     = {}
+  local projects  = {}
+  local pesc_stem = vim.pesc(stem)
 
   for _, filepath in ipairs(files) do
     local f = io.open(filepath, "r")
@@ -52,8 +54,16 @@ local function find_backlinks(stem)
       local line_num = 0
       for line in f:lines() do
         line_num = line_num + 1
-        if line:match("%[%[" .. vim.pesc(stem) .. "%]%]") then
-          table.insert(results, {
+        if line:match("%[%[" .. pesc_stem .. "%]%]") then
+          table.insert(links, {
+            filepath = filepath,
+            line_num = line_num,
+            line     = line:gsub("^%s+", ""),
+            title    = get_title(filepath) or vim.fn.fnamemodify(filepath, ":t:r"),
+          })
+        elseif line:match("@project:" .. pesc_stem .. "%f[^%w%-]")
+            and line:match("^%s*%- %[") then
+          table.insert(projects, {
             filepath = filepath,
             line_num = line_num,
             line     = line:gsub("^%s+", ""),
@@ -65,39 +75,67 @@ local function find_backlinks(stem)
     end
   end
 
-  return results
+  return links, projects
 end
 
 function M.show()
   local stem = current_stem()
   if stem == "" then print("No file open"); return end
 
-  local backlinks = find_backlinks(stem)
+  local links, projects = find_backlinks(stem)
 
   local display_lines = {}
-  local link_map      = {}  -- display row ? backlink entry
+  local link_map      = {}  -- display row → backlink entry
 
   table.insert(display_lines, "  Backlinks for: " .. stem)
   table.insert(display_lines, "  | Enter:jump  q/Esc:close")
   table.insert(display_lines, "  " .. string.rep("-", 50))
 
-  if #backlinks == 0 then
+  if #links == 0 and #projects == 0 then
     table.insert(display_lines, "")
     table.insert(display_lines, "  No backlinks found.")
     table.insert(display_lines, "")
   else
-    local last_title = nil
-    for _, bl in ipairs(backlinks) do
-      -- Group by source file
-      if bl.title ~= last_title then
+    local show_headers = (#links > 0) and (#projects > 0)
+
+    -- Project task associations (shown first when on a project page)
+    if #projects > 0 then
+      if show_headers then
         table.insert(display_lines, "")
-        table.insert(display_lines, "  " .. bl.title)
-        last_title = bl.title
+        table.insert(display_lines, "  ── Project Tasks ──")
       end
-      local display = "    > " .. bl.line
-      table.insert(display_lines, display)
-      link_map[#display_lines] = bl
+      local last_title = nil
+      for _, bl in ipairs(projects) do
+        if bl.title ~= last_title then
+          table.insert(display_lines, "")
+          table.insert(display_lines, "  " .. bl.title)
+          last_title = bl.title
+        end
+        local display = "    > " .. bl.line
+        table.insert(display_lines, display)
+        link_map[#display_lines] = bl
+      end
     end
+
+    -- Wiki link backlinks
+    if #links > 0 then
+      if show_headers then
+        table.insert(display_lines, "")
+        table.insert(display_lines, "  ── Wiki Links ──")
+      end
+      local last_title = nil
+      for _, bl in ipairs(links) do
+        if bl.title ~= last_title then
+          table.insert(display_lines, "")
+          table.insert(display_lines, "  " .. bl.title)
+          last_title = bl.title
+        end
+        local display = "    > " .. bl.line
+        table.insert(display_lines, display)
+        link_map[#display_lines] = bl
+      end
+    end
+
     table.insert(display_lines, "")
   end
 
